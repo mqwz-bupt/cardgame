@@ -62,7 +62,7 @@ let toastTimer = null;
 //   idx 当前已播放到的 step 序号（-1 = 入场态、未播放任何 step）
 //   current 刚渲染的 step（renderCell 用它高亮攻击者/目标）
 let battleAnim = null;
-const BATTLE_STEP_MS = 900;       // 每步间隔
+const BATTLE_STEP_MS = 1400;      // 每步间隔：给攻击移动/弹道更清楚的阅读时间
 const BATTLE_ENTRY_DELAY_MS = 500; // 进入战斗态 → 第一步的延迟
 
 // ---------- 音效（WebAudio 程序生成） ----------
@@ -147,23 +147,47 @@ function showToast(msg) {
 }
 
 // ---------- 卡牌面 ----------
+function renderCardArt(def) {
+  const cls = ['card-art', `art-${def.id}`, `art-kind-${def.kind}`, def.ability && `art-ability-${def.ability}`]
+    .filter(Boolean).join(' ');
+  if (def.kind === 'unit') {
+    return el('div', { class: cls, 'aria-label': def.name }, [
+      el('span', { class: 'art-ground' }),
+      el('span', { class: 'art-body' }),
+      el('span', { class: 'art-head' }),
+      el('span', { class: 'art-weapon' }),
+      el('span', { class: 'art-detail' })
+    ]);
+  }
+  return el('div', { class: cls, 'aria-label': def.name }, [
+    el('span', { class: 'art-orb' }),
+    el('span', { class: 'art-detail' }),
+    el('span', { class: 'art-drop art-drop-a' }),
+    el('span', { class: 'art-drop art-drop-b' }),
+    el('span', { class: 'art-drop art-drop-c' })
+  ]);
+}
+
 function renderCardFace(def, opts = {}) {
   const isSpell = def.kind === 'spell';
   const isWeather = def.kind === 'weather';
+  const typeLabel = isSpell ? '法术' : isWeather ? '天气' : '单位';
   const abilityCls = def.ability ? `ability-${def.ability}` : 'ability-none';
-  const cls = ['card', isSpell && 'card-spell', isWeather && 'card-weather', abilityCls,
+  const cls = ['card', `card-${def.kind}`, isSpell && 'card-spell', isWeather && 'card-weather', abilityCls,
                ...(Array.isArray(opts.classes) ? opts.classes : [opts.classes])]
     .filter(Boolean).join(' ');
   const hp = opts.hp ?? def.hp;
   const children = [
     el('div', { class: 'card-banner' }),
-    el('div', { class: 'card-icon', text: def.icon }),
+    el('div', { class: 'card-shine' }),
+    el('div', { class: 'card-type', text: typeLabel }),
+    renderCardArt(def),
     el('div', { class: 'card-name', text: def.name })
   ];
   if (def.kind === 'unit') {
     children.push(el('div', { class: 'card-stats' }, [
-      el('span', { class: 'stat-hp', text: `❤${hp}/${def.hp}` }),
-      el('span', { class: 'stat-atk', text: `⚔${def.atk}` })
+      el('span', { class: 'stat-hp', text: `HP ${hp}/${def.hp}` }),
+      el('span', { class: 'stat-atk', text: `ATK ${def.atk}` })
     ]));
     if (def.ability) {
       children.push(el('div', { class: 'card-ability', text: abilityLabel(def.ability) }));
@@ -171,7 +195,12 @@ function renderCardFace(def, opts = {}) {
   } else {
     children.push(el('div', { class: 'card-desc' }, def.desc));
   }
-  return el('div', { class: cls }, children);
+  return el('div', {
+    class: cls,
+    'data-kind': def.kind,
+    'data-card-id': def.id,
+    'data-ability': def.ability || ''
+  }, children);
 }
 
 function abilityLabel(ability) {
@@ -214,35 +243,24 @@ function renderPlayerHand(hand) {
                      || (interact.mode === 'await_deploy_cell' && interact.playedIdx === idx)
                      || (interact.mode === 'await_poly_target' && interact.polyIdx === idx);
     const isDiscardPick = interact.mode === 'await_discard' && interact.discardIdx === idx;
-    const abilityCls = def.ability ? `ability-${def.ability}` : 'ability-none';
-    const cls = ['card', def.kind === 'spell' && 'card-spell', def.kind === 'weather' && 'card-weather',
-                 abilityCls, isSelected && 'selected', isDiscardPick && 'discard-pick']
-      .filter(Boolean).join(' ');
-    const node = el('div', { class: cls, 'data-hand-idx': idx }, [
-      el('div', { class: 'card-banner' }),
-      el('div', { class: 'card-icon', text: def.icon }),
-      el('div', { class: 'card-name', text: def.name })
-    ]);
-    if (def.kind === 'unit') {
-      node.appendChild(el('div', { class: 'card-stats' }, [
-        el('span', { class: 'stat-hp', text: `❤${def.hp}/${def.hp}` }),
-        el('span', { class: 'stat-atk', text: `⚔${def.atk}` })
-      ]));
-      if (def.ability) {
-        node.appendChild(el('div', { class: 'card-ability', text: abilityLabel(def.ability) }));
-      }
-    } else {
-      node.appendChild(el('div', { class: 'card-desc' }, def.desc));
-    }
+    const node = renderCardFace(def, {
+      classes: ['hand-card', isSelected && 'selected', isDiscardPick && 'discard-pick']
+    });
+    node.setAttribute('data-hand-idx', idx);
+    node.setAttribute('style', `--card-delay:${Math.min(idx, 10) * 34}ms`);
     node.addEventListener('click', () => onPlayerHandClick(idx));
     return node;
   });
-  return el('div', { class: 'hand' }, cards);
+  return el('div', { class: 'hand player-hand' }, cards);
 }
 
 function renderEnemyHand(hand) {
-  return el('div', { class: 'hand' },
-    Array.from({ length: hand.length }, () => el('div', { class: 'card-back' }))
+  return el('div', { class: 'hand enemy-hand' },
+    Array.from({ length: hand.length }, (_, idx) =>
+      el('div', { class: 'card-back', style: `--card-delay:${Math.min(idx, 10) * 30}ms` }, [
+        el('div', { class: 'card-back-sigil', text: '✦' })
+      ])
+    )
   );
 }
 
@@ -282,6 +300,9 @@ function renderCell(slot, state) {
                       && step.targetPos.row === slot.row
                       && step.targetPos.col === slot.col;
   const cls = ['cell',
+               `cell-${slot.side}`,
+               `row-${slot.row}`,
+               unit ? 'occupied' : 'empty',
                isPolyTarget && 'targetable',
                isDeployTarget && 'targetable',
                isCurrentAttacker && 'attacker-active',
@@ -290,6 +311,7 @@ function renderCell(slot, state) {
                isTakingDamage && 'taking-damage']
     .filter(Boolean).join(' ');
   const children = [
+    el('div', { class: 'cell-glow' }),
     el('span', { class: 'pos-label', text: `${sideTag}·${localPos}` })
   ];
   if (unit) {
@@ -299,7 +321,8 @@ function renderCell(slot, state) {
     });
     if (!unit.revealed) {
       card.textContent = '';
-      card.appendChild(el('div', { class: 'card-icon', text: '❓' }));
+      card.setAttribute('data-kind', 'hidden');
+      card.appendChild(el('div', { class: 'card-back-sigil', text: '✦' }));
       card.appendChild(el('div', { class: 'card-name', text: '暗置' }));
     }
     children.push(card);
@@ -318,41 +341,147 @@ function renderCell(slot, state) {
   return cellNode;
 }
 
+function slotVisualPoint(pos) {
+  if (!pos) return null;
+  if (pos.row === undefined || pos.col === undefined) {
+    return {
+      side: pos.side,
+      col: 1,
+      row: pos.side === SIDES.ENEMY ? -0.78 : 4.78,
+      isLord: true
+    };
+  }
+  const row = pos.side === SIDES.ENEMY
+    ? (pos.row === 'back' ? 0 : 1)
+    : (pos.row === 'front' ? 2 : 3);
+  return { side: pos.side, col: pos.col, row, isLord: false };
+}
+
+function findDefByStepUid(snapshot, uid) {
+  if (!snapshot || !uid) return null;
+  for (const side of [SIDES.PLAYER, SIDES.ENEMY]) {
+    const board = snapshot.players[side].board;
+    for (const unit of Object.values(board)) {
+      if (unit && unit.uid === uid) return unit.def;
+    }
+  }
+  return null;
+}
+
+function findDefByName(name) {
+  return Object.values(ALL_CARDS).find(def => def.name === name) || null;
+}
+
+function attackStyle(from, to) {
+  if (!from || !to) return '';
+  const point = p => ({
+    x: ((p.col + 0.5) / 3) * 100,
+    y: ((p.row + 0.5) / 4) * 100
+  });
+  const a = point(from);
+  const b = point(to);
+  const approach = {
+    x: a.x + (b.x - a.x) * 0.78,
+    y: a.y + (b.y - a.y) * 0.78
+  };
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+  const dist = Math.max(18, Math.hypot(dx, dy));
+  const vars = [
+    `--from-x:${a.x.toFixed(3)}%`,
+    `--from-y:${a.y.toFixed(3)}%`,
+    `--to-x:${b.x.toFixed(3)}%`,
+    `--to-y:${b.y.toFixed(3)}%`,
+    `--approach-x:${approach.x.toFixed(3)}%`,
+    `--approach-y:${approach.y.toFixed(3)}%`,
+    `--shot-angle:${angle.toFixed(2)}deg`,
+    `--shot-distance:${dist.toFixed(3)}%`
+  ];
+  return vars.join(';');
+}
+
+function attackVisualKind(step) {
+  const ability = step.attackerAbility || '';
+  if (ability === 'any_target') return 'ranged';
+  if (ability === 'bomb' || ability === 'bomb_pre') return 'bomb';
+  if (ability === 'flex' || ability === 'death_draw') return 'magic';
+  if (ability === 'thorns' || step.kind === 'thorns') return 'thorns';
+  return 'melee';
+}
+
+function renderBattleVfx(step) {
+  if (!step || !step.targetPos || (!step.attackerPos && step.kind !== 'thorns')) return null;
+  if (!['attack', 'lord_attack', 'thorns'].includes(step.kind)) return null;
+
+  const from = slotVisualPoint(step.attackerPos || step.targetPos);
+  const to = slotVisualPoint(step.targetPos);
+  const def = findDefByStepUid(step.snapshot, step.attackerUid) || findDefByName(step.attackerName);
+  const visualKind = attackVisualKind(step);
+  const sideCls = step.attackerPos && step.attackerPos.side === SIDES.ENEMY ? 'from-enemy' : 'from-player';
+  const cls = ['battle-vfx', `vfx-${visualKind}`, `vfx-${step.kind}`, sideCls, step.killed && 'vfx-kill']
+    .filter(Boolean).join(' ');
+  const children = [];
+
+  if (visualKind === 'melee' && def) {
+    children.push(el('div', { class: 'attack-card-wrap' }, [
+      renderCardFace(def, { classes: ['motion-card'] }),
+      el('span', { class: 'slash-mark' })
+    ]));
+  } else {
+    children.push(el('span', { class: 'attack-origin' }));
+    children.push(el('span', { class: 'attack-projectile' }, [
+      el('span', { class: 'projectile-head' })
+    ]));
+    children.push(el('span', { class: 'impact-burst' }));
+  }
+
+  children.push(el('span', { class: 'impact-ring' }));
+  return el('div', { class: cls, style: attackStyle(from, to), 'aria-hidden': 'true' }, children);
+}
+
 function renderBoard(state) {
-  return el('div', { class: 'board' },
-    BOARD_POSITIONS.map(slot => renderCell(slot, state))
-  );
+  const cls = ['board', state.weather ? `weather-${state.weather}` : 'weather-none', `phase-${state.phase}`]
+    .filter(Boolean).join(' ');
+  const cells = BOARD_POSITIONS.map(slot => renderCell(slot, state));
+  const vfx = renderBattleVfx(battleAnim && battleAnim.current);
+  return el('div', { class: cls }, [...cells, vfx]);
 }
 
 // ---------- 信息条 + 阶段按钮 ----------
 function renderInfoBar(state) {
   const weather = state.weather ? ALL_CARDS[state.weather] : null;
   const themeBtn = el('button', {
-    class: 'theme-btn',
-    text: document.body.dataset.theme === 'dark' ? '☀️' : '🌙',
+    class: 'theme-btn icon-btn',
+    text: document.body.dataset.theme === 'dark' ? '日' : '月',
     title: '切换主题'
   });
   themeBtn.addEventListener('click', toggleTheme);
   const muteBtn = el('button', {
-    class: 'theme-btn',
-    text: muted ? '🔇' : '🔊',
+    class: 'theme-btn icon-btn',
+    text: muted ? '静' : '音',
     title: '开关音效'
   });
   muteBtn.addEventListener('click', toggleMute);
-  return el('div', { class: 'info-bar' }, [
-    el('div', { class: 'phase-indicator', text: phaseLabel(state.phase) }),
-    el('div', { class: 'weather-indicator' }, [
-      el('span', { text: '天气：' }),
-      el('span', { text: weather ? `${weather.icon} ${weather.name}` : '— 无 —' })
+  return el('div', {
+    class: ['info-bar', weather ? `info-weather-${weather.id}` : 'info-weather-none'].join(' ')
+  }, [
+    el('div', { class: 'game-title' }, [
+      el('span', { class: 'game-emblem', text: '✦' }),
+      el('span', { text: '卡牌对战' })
     ]),
-    el('div', { class: 'deck-count', text:
+    el('div', { class: 'info-chip phase-indicator', text: phaseLabel(state.phase) }),
+    el('div', { class: 'info-chip weather-indicator' }, [
+      el('span', { text: '天气：' }),
+      el('span', { text: weather ? weather.name : '— 无 —' })
+    ]),
+    el('div', { class: 'info-chip deck-count', text:
       `共用牌库 ${state.deck.length} · 弃牌 ${state.discard.length}`
     }),
-    el('div', { class: 'turn-indicator', text:
+    el('div', { class: 'info-chip turn-indicator', text:
       `回合 ${state.turnNo} · 先手 ${state.firstAttacker === SIDES.PLAYER ? '我' : '敌'}`
     }),
-    themeBtn,
-    muteBtn
+    el('div', { class: 'info-actions' }, [themeBtn, muteBtn])
   ]);
 }
 
@@ -397,7 +526,10 @@ function renderActionBar(state) {
     btn = el('button', { class: 'action-btn disabled', text: '等待中...', disabled: true });
   }
   const hint = el('div', { class: 'action-hint', text: interactHint() });
-  const bar = el('div', { class: 'action-bar' }, [hint, btn]);
+  const bar = el('div', {
+    class: ['action-bar', `action-${state.phase}`, interact.mode !== 'idle' && 'is-choosing']
+      .filter(Boolean).join(' ')
+  }, [hint, btn]);
   return bar;
 }
 
@@ -438,7 +570,7 @@ function renderPlayerArea(side, state) {
     ? renderEnemyHand(state.players[side].hand)
     : renderPlayerHand(state.players[side].hand);
   const lastEvent = state.log[state.log.length - 1];
-  return el('div', { class: 'player-area' }, [
+  return el('div', { class: ['player-area', `area-${side}`].join(' ') }, [
     renderLordPanel(side, state.players[side].lord, lastEvent),
     hand
   ]);
@@ -454,21 +586,21 @@ function renderToast() {
 function sideTag(s) { return s === SIDES.PLAYER ? '我' : '敌'; }
 function cardName(id) {
   const def = ALL_CARDS[id];
-  return def ? `${def.icon}${def.name}` : id;
+  return def ? def.name : id;
 }
 
 const LOG_LABEL = {
-  game_start:    () => '🎮 对局开始',
-  phase_reveal:  () => '🎴 双方翻面',
-  phase_battle:  () => '⚔️ 进入战斗',
-  phase_draw:    () => '🃏 抽牌阶段',
-  turn_end:      e => `🔚 第 ${e.turnNo} 回合结束`,
-  weather_changed:  e => `🌤 天气：${e.to ? cardName(e.to) : '无'}（原 ${e.from ? cardName(e.from) : '无'}）`,
+  game_start:    () => '对局开始',
+  phase_reveal:  () => '双方翻面',
+  phase_battle:  () => '进入战斗',
+  phase_draw:    () => '抽牌阶段',
+  turn_end:      e => `第 ${e.turnNo} 回合结束`,
+  weather_changed:  e => `天气：${e.to ? cardName(e.to) : '无'}（原 ${e.from ? cardName(e.from) : '无'}）`,
   weather_triggered: e => `${sideTag(e.side)} 抽到天气：${cardName(e.weather)}`,
   unit_deployed: e => `${sideTag(e.side)} 部署 ${cardName(e.cardId)}`,
   unit_died:     e => `${sideTag(e.side)} ${cardName(e.unit?.def?.id)} 阵亡`,
   unit_damaged:  e => `${sideTag(e.side)} 单位 -${e.dmg}（剩 ${e.hpAfter} 血）`,
-  polymorph_cast: e => `🐑 ${sideTag(e.side)} 释放变羊术`,
+  polymorph_cast: e => `${sideTag(e.side)} 释放变羊术`,
   lord_hit:      e => `${sideTag(e.side)} 主公 -1（剩 ${e.hpAfter}）`,
   necromancer_trigger: e => `${sideTag(e.side)} 亡灵法师触发抽 1`,
   hand_truncated: e => `${sideTag(e.side)} 手牌超 10 弃 ${e.discarded?.length || 0} 张`
@@ -506,7 +638,7 @@ function renderOverlay(state) {
   });
   return el('div', { class: 'overlay' }, [
     el('div', { class: 'overlay-panel' }, [
-      el('div', { class: 'overlay-title', text: youWon ? '🏆 胜利' : '💀 失败' }),
+      el('div', { class: 'overlay-title', text: youWon ? '胜利' : '失败' }),
       el('div', { class: 'overlay-sub', text: youWon ? '敌方主公倒下了' : '我方主公倒下了' }),
       btn
     ])
@@ -516,6 +648,14 @@ function renderOverlay(state) {
 // ---------- 主渲染 ----------
 function render() {
   const root = document.getElementById('game-root');
+  const stepKind = battleAnim && battleAnim.current && battleAnim.current.kind;
+  root.className = [
+    'game-root',
+    `phase-${gameState.phase}`,
+    gameState.weather ? `weather-${gameState.weather}` : 'weather-none',
+    stepKind && 'is-battle-step',
+    stepKind && `step-${stepKind}`
+  ].filter(Boolean).join(' ');
   root.textContent = '';
   root.appendChild(renderInfoBar(gameState));
   root.appendChild(renderPlayerArea(SIDES.ENEMY, gameState));
