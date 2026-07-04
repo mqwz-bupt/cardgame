@@ -2037,3 +2037,1561 @@ body[data-theme="dark"] .log-item {
     transition-duration: 1ms !important;
   }
 }
+
+/* ========== Card Component v2: warm paper, SVG mini characters ========== */
+.card {
+  --card-width: 112px;
+  --card-height: 168px;
+  --paper: #f8e7bd;
+  --paper-deep: #e7c988;
+  --paper-light: #fff4d4;
+  --ink: #4b321f;
+  --ink-soft: #7b5a38;
+  --hp-bg: #ffe0d2;
+  --hp-line: #b94733;
+  --hp-text: #c94134;
+  --atk-bg: #dff0d3;
+  --atk-line: #40825a;
+  --atk-text: #247047;
+  --svg-accent: #d97844;
+  --svg-accent-2: #e7b957;
+  width: var(--card-width);
+  height: var(--card-height);
+  display: grid;
+  grid-template-rows: 18px minmax(0, 1fr) 42px 46px;
+  gap: 5px;
+  padding: 9px;
+  overflow: visible;
+  position: relative;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.56), transparent 24%),
+    linear-gradient(160deg, var(--paper-light), var(--paper) 54%, var(--paper-deep));
+  border: 3px solid var(--ink);
+  border-radius: 15px;
+  box-shadow:
+    0 3px 0 rgba(75, 50, 31, 0.32),
+    0 12px 18px rgba(56, 39, 24, 0.16);
+  transform-origin: 50% 82%;
+  transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(75, 50, 31, 0.18);
+  border-radius: 11px;
+  pointer-events: none;
+}
+
+.card-paper-grain {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(18deg, rgba(75, 50, 31, 0.035) 0 1px, transparent 1px 9px),
+    repeating-linear-gradient(102deg, rgba(255, 255, 255, 0.11) 0 1px, transparent 1px 13px);
+  mix-blend-mode: multiply;
+  opacity: 0.7;
+}
+
+.card--hand {
+  --card-width: 122px;
+  --card-height: 183px;
+}
+
+.card--board {
+  --card-width: 96px;
+  --card-height: 138px;
+  grid-template-rows: minmax(0, 1fr) 38px 36px;
+  gap: 3px;
+  padding: 6px;
+  border-width: 2px;
+  border-radius: 12px;
+  box-shadow:
+    0 3px 0 rgba(75, 50, 31, 0.28),
+    0 10px 16px rgba(47, 34, 22, 0.18);
+}
+
+.card.in-cell.card--board {
+  width: min(calc(100% - 10px), var(--card-width));
+  height: min(calc(100% - 10px), var(--card-height));
+  padding: 7px;
+}
+
+.hand .card--hand:hover {
+  z-index: 20;
+  transform: translateY(-8px) rotate(-1deg);
+  box-shadow:
+    0 7px 0 rgba(75, 50, 31, 0.28),
+    0 18px 26px rgba(56, 39, 24, 0.22);
+  filter: saturate(1.04);
+}
+
+.card-type-badge {
+  justify-self: end;
+  align-self: start;
+  z-index: 2;
+  min-width: 34px;
+  padding: 2px 8px;
+  color: #fff7df;
+  background: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.18);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.card--board .card-type-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  min-width: 18px;
+  padding: 1px 4px;
+  font-size: 7px;
+  border-width: 1px;
+  opacity: 0.78;
+}
+
+.card-illustration {
+  z-index: 1;
+  align-self: stretch;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  margin-top: -2px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.16)),
+    #f2dba7;
+  border: 2px solid rgba(75, 50, 31, 0.3);
+  border-radius: 12px;
+}
+
+.card--board .card-illustration {
+  margin-top: 0;
+  border-radius: 9px;
+  border-width: 1px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0.08)),
+    #efd9a8;
+}
+
+.card-illustration-svg {
+  width: 86%;
+  height: 86%;
+  overflow: visible;
+}
+
+.card--board .card-illustration-svg {
+  width: 104%;
+  height: 104%;
+}
+
+.card-title-area {
+  z-index: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 3px;
+}
+
+.card-name-banner {
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 2px 5px;
+  background: #fff0c9;
+  border: 2px solid rgba(75, 50, 31, 0.42);
+  border-radius: 8px;
+  box-shadow: inset 0 -2px 0 rgba(75, 50, 31, 0.08);
+}
+
+.card-name {
+  min-height: 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.08;
+  text-align: center;
+  letter-spacing: 0;
+}
+
+.card--board .card-name-banner {
+  padding: 1px 4px;
+  border-width: 1px;
+  border-radius: 6px;
+}
+
+.card--board .card-name {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.card--board[data-card-id="necromancer"] .card-name,
+.card--board[data-card-id="berserker"] .card-name,
+.card--board[data-card-id="vampire"] .card-name {
+  font-size: 10px;
+}
+
+.card-stats {
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  min-height: 0;
+  margin-top: 0;
+  font-weight: 900;
+}
+
+.stat-block {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 13px 1fr;
+  align-items: center;
+  justify-items: center;
+  padding: 3px;
+  border: 2px solid;
+  border-radius: 10px;
+  box-shadow: inset 0 -2px 0 rgba(75, 50, 31, 0.08);
+}
+
+.stat-label {
+  display: block;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 1000;
+  letter-spacing: 0;
+}
+
+.stat-value {
+  display: block;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  font-size: 19px;
+  line-height: 0.98;
+  font-weight: 1000;
+}
+
+.stat-hp {
+  color: var(--hp-text);
+  background: var(--hp-bg);
+  border-color: var(--hp-line);
+}
+
+.stat-atk {
+  color: var(--atk-text);
+  background: var(--atk-bg);
+  border-color: var(--atk-line);
+}
+
+.card--board .card-stats {
+  gap: 4px;
+}
+
+.card--board .stat-block {
+  grid-template-rows: 10px 1fr;
+  padding: 2px;
+  border-width: 1px;
+  border-radius: 7px;
+}
+
+.card--board .stat-label {
+  font-size: 8px;
+}
+
+.card--board .stat-value {
+  font-size: 14px;
+}
+
+.card-ability {
+  position: static;
+  justify-self: center;
+  max-width: 100%;
+  min-height: 18px;
+  margin: 0;
+  padding: 2px 8px;
+  color: var(--ink);
+  background: #f6d886;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 0 2px 0 rgba(75, 50, 31, 0.22);
+  text-align: center;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.card--board .card-ability {
+  justify-self: center;
+  min-height: 14px;
+  max-width: 100%;
+  padding: 1px 5px;
+  border-width: 1px;
+  font-size: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.card-desc {
+  z-index: 1;
+  grid-row: 4;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  margin-top: 0;
+  padding: 5px;
+  color: var(--ink-soft);
+  background: rgba(255, 244, 212, 0.72);
+  border: 2px solid rgba(75, 50, 31, 0.32);
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.22;
+  text-align: center;
+}
+
+.card--board .card-desc {
+  padding: 3px;
+  border-width: 1px;
+  border-radius: 7px;
+  font-size: 8px;
+}
+
+.card-spell {
+  --svg-accent: #a260a9;
+  --svg-accent-2: #e0a7d8;
+}
+
+.card-weather {
+  --svg-accent: #4d8fc0;
+  --svg-accent-2: #b8d9ee;
+}
+
+.card.card-spell,
+.card.card-weather {
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.58), transparent 24%),
+    linear-gradient(160deg, #fff0c9, #f5dfab 55%, #dfc07b);
+}
+
+.ability-pierce { --svg-accent: #cf6245; --svg-accent-2: #e3a252; }
+.ability-any_target { --svg-accent: #408b78; --svg-accent-2: #89c7a6; }
+.ability-guard { --svg-accent: #4b80ad; --svg-accent-2: #c6dceb; }
+.ability-bomb { --svg-accent: #6b5a50; --svg-accent-2: #e0a14b; }
+.ability-flex { --svg-accent: #c8963d; --svg-accent-2: #f4db87; }
+.ability-lifesteal { --svg-accent: #7f4a68; --svg-accent-2: #c785a6; }
+.ability-chain { --svg-accent: #c45142; --svg-accent-2: #e28c57; }
+.ability-thorns { --svg-accent: #4f915a; --svg-accent-2: #9cbf67; }
+.ability-death_draw { --svg-accent: #65506d; --svg-accent-2: #b5a2bd; }
+.ability-reposition { --svg-accent: #9b7145; --svg-accent-2: #d5a866; }
+
+.svg-line,
+.svg-metal,
+.svg-wood,
+.svg-fuse,
+.svg-spark,
+.svg-gold,
+.svg-blue,
+.svg-rage,
+.svg-fang {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.svg-fill,
+.svg-tunic,
+.svg-skin,
+.svg-blue-fill,
+.svg-dark-fill,
+.svg-gold-fill,
+.svg-green-fill,
+.svg-cape,
+.svg-bone,
+.svg-horse {
+  stroke: var(--ink);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.svg-tunic { fill: var(--svg-accent); }
+.svg-fill { fill: var(--svg-accent); }
+.svg-skin { fill: #efc48b; }
+.svg-blue-fill { fill: #bdd7e8; }
+.svg-dark-fill { fill: #3e3432; }
+.svg-gold-fill { fill: #f0bd4f; }
+.svg-green-fill { fill: #69a767; }
+.svg-cape { fill: #70465f; }
+.svg-bone { fill: #efe7d2; }
+.svg-horse { fill: #a87949; }
+.svg-metal { stroke: #eee7d4; }
+.svg-wood { stroke: #8d623a; }
+.svg-fuse { stroke: #5b4630; stroke-width: 4; }
+.svg-spark,
+.svg-gold { stroke: #f0bd4f; }
+.svg-blue { stroke: #4d8fc0; }
+.svg-rage { stroke: #b94733; }
+.svg-fang { stroke: #fff4df; stroke-width: 4; }
+.svg-halo {
+  fill: none;
+  stroke: #f0bd4f;
+  stroke-width: 5;
+}
+.svg-shadow {
+  fill: rgba(75, 50, 31, 0.18);
+  stroke: none;
+}
+
+.card-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  z-index: 80;
+  width: max-content;
+  max-width: 240px;
+  padding: 8px 10px;
+  color: #fff7df;
+  background: rgba(75, 50, 31, 0.96);
+  border: 2px solid #2f2117;
+  border-radius: 9px;
+  box-shadow: 0 8px 18px rgba(36, 28, 18, 0.24);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+  text-align: left;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 6px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.card-tooltip::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 12px;
+  height: 12px;
+  background: rgba(75, 50, 31, 0.96);
+  border-right: 2px solid #2f2117;
+  border-bottom: 2px solid #2f2117;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.card:hover .card-tooltip,
+.card:focus-visible .card-tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.card--board:hover,
+.card--board:focus-visible {
+  z-index: 20;
+}
+
+.card--board .card-tooltip {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  top: auto;
+  width: min(280px, calc(100vw - 36px));
+  max-width: none;
+  transform: translateY(6px);
+}
+
+.card--board .card-tooltip::after {
+  display: none;
+}
+
+.card--board:hover .card-tooltip,
+.card--board:focus-visible .card-tooltip {
+  transform: translateY(0);
+}
+
+.card.face-down,
+.card[data-kind="hidden"] {
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  color: #fff0ce;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0 10%, transparent 10% 100%),
+    repeating-linear-gradient(45deg, #6d3d1d 0 8px, #d7812e 8px 15px, #f0a13c 15px 22px);
+}
+
+.card[data-kind="hidden"] .card-name {
+  color: #fff0ce;
+  font-size: 14px;
+}
+
+@media (max-width: 900px) {
+  .card--hand {
+    --card-width: 92px;
+    --card-height: 138px;
+    grid-template-rows: 14px minmax(0, 1fr) 22px 36px;
+    gap: 4px;
+    padding: 7px;
+    border-radius: 13px;
+  }
+
+  .card--hand .card-name { font-size: 12px; }
+  .card--hand .stat-label { font-size: 8px; }
+  .card--hand .stat-value { font-size: 15px; }
+  .card--hand .card-ability { font-size: 8px; }
+}
+
+@media (max-width: 430px) {
+  .card--hand {
+    --card-width: 78px;
+    --card-height: 117px;
+    grid-template-rows: 12px minmax(0, 1fr) 18px 30px;
+    gap: 3px;
+    padding: 6px;
+    border-width: 2px;
+    border-radius: 11px;
+  }
+
+  .card--board {
+    --card-width: 66px;
+    --card-height: 99px;
+    grid-template-rows: 10px minmax(0, 1fr) 16px 26px;
+    gap: 2px;
+    padding: 5px;
+  }
+
+  .card--hand .card-name { font-size: 10px; }
+  .card--board .card-name { font-size: 9px; }
+  .card--hand .stat-value { font-size: 13px; }
+  .card--board .stat-value { font-size: 11px; }
+  .card-tooltip { max-width: 200px; font-size: 10px; }
+}
+
+/* Card UI polish overrides: compact board cards and quieter play surface */
+.hand {
+  min-height: 206px;
+  gap: 12px;
+  padding: 12px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.08)),
+    rgba(255, 244, 214, 0.28);
+  border-color: rgba(75, 50, 31, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.enemy-hand {
+  min-height: 76px;
+  padding: 8px 10px;
+}
+
+.board {
+  background:
+    linear-gradient(180deg, rgba(255, 248, 226, 0.62), rgba(238, 214, 165, 0.46)),
+    rgba(255, 247, 226, 0.42);
+  border-color: rgba(75, 50, 31, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.52),
+    0 14px 26px rgba(48, 34, 21, 0.12);
+}
+
+.board::before,
+.board::after {
+  opacity: 0.2;
+}
+
+.board.weather-rain::before,
+.board.weather-snow::before,
+.board.weather-sun::before {
+  opacity: 0.18;
+}
+
+.cell {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04)),
+    rgba(255, 239, 199, 0.22);
+  border-color: rgba(75, 50, 31, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.cell-player,
+.cell-enemy {
+  background: rgba(255, 241, 205, 0.24);
+}
+
+.cell.occupied {
+  background: rgba(255, 244, 211, 0.16);
+  border-color: rgba(75, 50, 31, 0.24);
+}
+
+.cell.empty .cell-glow {
+  opacity: 0.08;
+}
+
+.cell.targetable {
+  border-color: rgba(238, 177, 67, 0.9);
+  background:
+    linear-gradient(180deg, rgba(255, 246, 187, 0.46), rgba(255, 237, 159, 0.2)),
+    rgba(255, 238, 166, 0.22);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.24),
+    0 0 0 3px rgba(238, 177, 67, 0.16);
+}
+
+.cell.attacker-active {
+  border-color: rgba(176, 72, 48, 0.82);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.22),
+    0 0 0 3px rgba(176, 72, 48, 0.14);
+}
+
+.cell.healing {
+  border-color: rgba(64, 130, 90, 0.88);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.22),
+    0 0 0 4px rgba(64, 130, 90, 0.16);
+}
+
+.heal-pop {
+  color: #fff9e8;
+  background: #2f8f60;
+}
+
+.lord-panel {
+  background:
+    radial-gradient(circle at 24% 16%, rgba(255, 255, 255, 0.52), transparent 27%),
+    linear-gradient(160deg, #fff1cc, #f5dda8 62%, #e2c17b);
+  border: 3px solid #4b321f;
+  border-radius: 14px;
+  box-shadow:
+    0 3px 0 rgba(75, 50, 31, 0.28),
+    0 12px 18px rgba(48, 34, 21, 0.12);
+}
+
+.lord-panel::before {
+  width: 9px;
+  background: #3d8a70;
+  border-right: 2px solid rgba(75, 50, 31, 0.28);
+}
+
+.area-enemy .lord-panel::before {
+  background: #c24b3a;
+}
+
+.hp-pip {
+  width: 18px;
+  height: 18px;
+  border-color: #4b321f;
+  background: #fff6dc;
+}
+
+.hp-pip.filled {
+  background: linear-gradient(180deg, #ff8b79, #c94134);
+}
+
+.card-back {
+  width: var(--card-width, var(--card-w));
+  height: var(--card-height, var(--card-h));
+  color: #fff3d3;
+  background:
+    radial-gradient(circle at 26% 18%, rgba(255, 255, 255, 0.32), transparent 24%),
+    repeating-linear-gradient(45deg, #5a361f 0 8px, #9d5f30 8px 15px, #d48a3f 15px 22px);
+  border: 3px solid #4b321f;
+  border-radius: 15px;
+  box-shadow:
+    0 3px 0 rgba(75, 50, 31, 0.28),
+    0 10px 16px rgba(48, 34, 21, 0.13);
+}
+
+.card-back::before {
+  inset: 8px;
+  border: 2px solid rgba(255, 242, 208, 0.58);
+  border-radius: 11px;
+}
+
+.card-back-sigil {
+  width: 40px;
+  height: 40px;
+  color: #fff3d3;
+  background: rgba(75, 50, 31, 0.36);
+  border: 2px solid rgba(255, 242, 208, 0.62);
+  font-size: 24px;
+}
+
+.card-back-sigil::before,
+.card-back-sigil::after {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border: 2px solid rgba(255, 243, 211, 0.9);
+  transform: rotate(45deg);
+}
+
+.card-back-sigil::after {
+  inset: 15px;
+  background: rgba(255, 243, 211, 0.9);
+}
+
+.card.selected {
+  outline: 4px solid #f3bd4d;
+  outline-offset: 3px;
+  transform: translateY(-12px) rotate(-1deg);
+  box-shadow:
+    0 8px 0 rgba(75, 50, 31, 0.28),
+    0 0 0 6px rgba(243, 189, 77, 0.2),
+    0 18px 28px rgba(48, 34, 21, 0.2);
+}
+
+.card.discard-pick {
+  outline: 3px dashed #b94733;
+  outline-offset: 3px;
+  filter: saturate(0.72) brightness(0.94);
+}
+
+.card--hand {
+  --card-width: 124px;
+  --card-height: 186px;
+}
+
+.card--board {
+  --card-width: 98px;
+  --card-height: 140px;
+  grid-template-rows: minmax(0, 1fr) 38px 37px;
+  gap: 3px;
+}
+
+.card.in-cell.card--board {
+  width: min(calc(100% - 8px), var(--card-width));
+  height: min(calc(100% - 8px), var(--card-height));
+  padding: 6px;
+}
+
+.card--board:hover,
+.card--board:focus-visible {
+  transform: translateY(-2px);
+  box-shadow:
+    0 5px 0 rgba(75, 50, 31, 0.24),
+    0 14px 20px rgba(48, 34, 21, 0.2);
+}
+
+.card-title-area {
+  min-height: 0;
+}
+
+.card--board .card-title-area {
+  grid-template-rows: minmax(0, 1fr) 13px;
+  gap: 2px;
+}
+
+.card--board .card-type-badge {
+  display: none;
+}
+
+.card--hand .card-illustration-svg {
+  width: 90%;
+  height: 90%;
+}
+
+.card--board .card-illustration-svg {
+  width: 108%;
+  height: 108%;
+}
+
+.card--board .card-name-banner {
+  min-height: 22px;
+}
+
+.card--board .card-name {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.card--board[data-card-id="necromancer"] .card-name,
+.card--board[data-card-id="berserker"] .card-name,
+.card--board[data-card-id="vampire"] .card-name,
+.card--board[data-card-id="polymorph"] .card-name {
+  font-size: 9px;
+}
+
+.stat-label {
+  min-width: 28px;
+  padding: 2px 5px 1px;
+  color: #fff9e9;
+  border-radius: 999px;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.stat-hp .stat-label {
+  background: var(--hp-line);
+}
+
+.stat-atk .stat-label {
+  background: var(--atk-line);
+}
+
+.stat-value {
+  font-size: 20px;
+  letter-spacing: 0;
+}
+
+.card--board .stat-block {
+  grid-template-rows: 11px 1fr;
+  min-width: 0;
+  padding: 2px;
+  border-width: 1px;
+}
+
+.card--board .stat-label {
+  min-width: 20px;
+  padding: 1px 3px;
+  font-size: 7px;
+}
+
+.card--board .stat-value {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.card--hand .card-ability {
+  min-height: 18px;
+}
+
+.card--board .card-ability {
+  min-height: 13px;
+  padding: 1px 5px 0;
+  font-size: 7px;
+  line-height: 1.1;
+}
+
+.svg-dark-line {
+  fill: none;
+  stroke: #3e3432;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.card.unplayable,
+.card.disabled {
+  filter: grayscale(0.22) brightness(0.88);
+  opacity: 0.72;
+}
+
+@media (max-width: 900px) {
+  .hand {
+    min-height: 164px;
+    gap: 9px;
+    padding: 9px;
+  }
+
+  .enemy-hand {
+    min-height: 64px;
+  }
+
+  .card--hand {
+    --card-width: 96px;
+    --card-height: 144px;
+    grid-template-rows: 14px minmax(0, 1fr) 34px 34px;
+    padding: 7px;
+  }
+
+  .card--hand .card-name {
+    font-size: 11px;
+  }
+
+  .card--hand .card-ability {
+    min-height: 14px;
+    padding: 1px 6px;
+    font-size: 7px;
+  }
+
+  .card--hand .stat-label {
+    min-width: 21px;
+    padding: 1px 3px;
+    font-size: 7px;
+  }
+
+  .card--hand .stat-value {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 430px) {
+  .hand {
+    min-height: 136px;
+    gap: 7px;
+    padding: 8px;
+  }
+
+  .card--hand {
+    --card-width: 82px;
+    --card-height: 123px;
+    grid-template-rows: 11px minmax(0, 1fr) 28px 30px;
+    gap: 3px;
+    padding: 5px;
+  }
+
+  .card--board {
+    --card-width: 74px;
+    --card-height: 106px;
+    grid-template-rows: minmax(0, 1fr) 29px 28px;
+    gap: 2px;
+    padding: 4px;
+  }
+
+  .card.in-cell.card--board {
+    width: min(calc(100% - 6px), var(--card-width));
+    height: min(calc(100% - 6px), var(--card-height));
+    padding: 4px;
+  }
+
+  .card--hand .card-name {
+    font-size: 9px;
+  }
+
+  .card--board .card-name {
+    font-size: 8px;
+  }
+
+  .card--board[data-card-id="necromancer"] .card-name,
+  .card--board[data-card-id="berserker"] .card-name,
+  .card--board[data-card-id="vampire"] .card-name,
+  .card--board[data-card-id="polymorph"] .card-name {
+    font-size: 7px;
+  }
+
+  .card--board .card-title-area {
+    grid-template-rows: minmax(0, 1fr) 10px;
+  }
+
+  .card--board .card-ability {
+    min-height: 10px;
+    padding: 0 3px;
+    font-size: 6px;
+  }
+
+  .card--board .stat-block {
+    grid-template-rows: 9px 1fr;
+    padding: 1px;
+  }
+
+  .card--board .stat-label {
+    min-width: 17px;
+    font-size: 6px;
+  }
+
+  .card--board .stat-value {
+    font-size: 11px;
+  }
+}
+
+/* Height-fit desktop mode: keeps the whole table visible in shorter browser panes. */
+@media (min-width: 901px) and (max-height: 1200px) {
+  :root {
+    --cell-w: 92px;
+    --cell-h: 112px;
+    --gap-md: 8px;
+    --text-lg: 16px;
+  }
+
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .game-root {
+    width: min(100%, 1380px);
+    height: 100dvh;
+    min-height: 0;
+    padding: 6px 10px;
+    gap: 6px;
+    overflow: hidden;
+  }
+
+  .info-bar {
+    flex: 0 0 auto;
+    gap: 6px;
+    padding: 5px 8px;
+    border-width: 1px;
+  }
+
+  .game-title {
+    min-height: 28px;
+    padding: 3px 8px;
+    font-size: 15px;
+  }
+
+  .game-emblem {
+    width: 20px;
+    height: 20px;
+  }
+
+  .info-chip {
+    min-height: 26px;
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+
+  .theme-btn,
+  .icon-btn {
+    width: 30px;
+    height: 30px;
+    border-width: 1px;
+  }
+
+  .player-area {
+    flex: 0 0 auto;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 8px;
+    min-height: 0;
+  }
+
+  .lord-panel {
+    min-height: 70px;
+    padding: 10px 12px;
+    border-width: 2px;
+  }
+
+  .lord-title {
+    font-size: 17px;
+  }
+
+  .lord-hp {
+    margin-top: 7px;
+  }
+
+  .hp-pip {
+    width: 15px;
+    height: 15px;
+  }
+
+  .hand {
+    min-height: 154px;
+    max-height: 164px;
+    gap: 10px;
+    padding: 8px 10px;
+  }
+
+  .enemy-hand {
+    min-height: 72px;
+    max-height: 80px;
+    padding: 6px 10px;
+  }
+
+  .enemy-hand .card-back {
+    width: 70px;
+    height: 96px;
+    border-width: 2px;
+    border-radius: 12px;
+  }
+
+  .enemy-hand .card-back-sigil {
+    width: 30px;
+    height: 30px;
+  }
+
+  .board-wrap {
+    flex: 0 1 auto;
+    min-height: 0;
+    align-items: center;
+  }
+
+  .board {
+    gap: 6px;
+    padding: 10px;
+    border-width: 2px;
+  }
+
+  .cell {
+    border-width: 1px;
+  }
+
+  .pos-label {
+    top: 4px;
+    left: 6px;
+    font-size: 9px;
+  }
+
+  .card--hand {
+    --card-width: 106px;
+    --card-height: 159px;
+    grid-template-rows: 14px minmax(0, 1fr) 34px 35px;
+    gap: 3px;
+    padding: 7px;
+    border-radius: 13px;
+  }
+
+  .card--hand .card-name {
+    font-size: 12px;
+  }
+
+  .card--hand .card-ability {
+    min-height: 14px;
+    padding: 1px 6px;
+    font-size: 8px;
+  }
+
+  .card--hand .stat-block {
+    grid-template-rows: 10px 1fr;
+    padding: 2px;
+  }
+
+  .card--hand .stat-label {
+    min-width: 21px;
+    padding: 1px 3px;
+    font-size: 7px;
+  }
+
+  .card--hand .stat-value {
+    font-size: 15px;
+  }
+
+  .card--board {
+    --card-width: 80px;
+    --card-height: 106px;
+    grid-template-rows: minmax(0, 1fr) 30px 28px;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 10px;
+  }
+
+  .card.in-cell.card--board {
+    width: min(calc(100% - 6px), var(--card-width));
+    height: min(calc(100% - 6px), var(--card-height));
+    padding: 4px;
+  }
+
+  .card--board .card-title-area {
+    grid-template-rows: minmax(0, 1fr) 10px;
+  }
+
+  .card--board .card-name-banner {
+    min-height: 18px;
+    padding: 1px 3px;
+  }
+
+  .card--board .card-name {
+    font-size: 8px;
+  }
+
+  .card--board[data-card-id="necromancer"] .card-name,
+  .card--board[data-card-id="berserker"] .card-name,
+  .card--board[data-card-id="vampire"] .card-name,
+  .card--board[data-card-id="polymorph"] .card-name {
+    font-size: 7px;
+  }
+
+  .card--board .card-ability {
+    min-height: 10px;
+    padding: 0 3px;
+    font-size: 6px;
+  }
+
+  .card--board .stat-block {
+    grid-template-rows: 9px 1fr;
+    padding: 1px;
+  }
+
+  .card--board .stat-label {
+    min-width: 17px;
+    padding: 1px 2px;
+    font-size: 6px;
+  }
+
+  .card--board .stat-value {
+    font-size: 11px;
+  }
+
+  .action-bar {
+    flex: 0 0 auto;
+    padding: 6px 8px;
+    border-width: 1px;
+  }
+
+  .action-hint {
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .action-btn {
+    min-height: 32px;
+    padding: 6px 14px;
+    font-size: 12px;
+  }
+
+  .action-btn.primary {
+    min-height: 36px;
+    padding: 7px 20px;
+    font-size: 13px;
+  }
+
+  .log-panel {
+    flex: 0 0 auto;
+    max-height: 46px;
+    padding: 5px 8px 0;
+    border-width: 1px;
+  }
+
+  .log-header {
+    display: none;
+  }
+
+  .log-list {
+    max-height: 36px;
+    padding-bottom: 5px;
+  }
+
+  .log-item {
+    min-height: 22px;
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 820px) {
+  :root {
+    --cell-w: 82px;
+    --cell-h: 95px;
+  }
+
+  .game-root {
+    padding: 5px 8px;
+    gap: 5px;
+  }
+
+  .player-area {
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .lord-panel {
+    min-height: 58px;
+    padding: 8px 10px;
+  }
+
+  .lord-title {
+    font-size: 15px;
+  }
+
+  .lord-hp {
+    margin-top: 5px;
+  }
+
+  .hp-pip {
+    width: 13px;
+    height: 13px;
+  }
+
+  .hand {
+    min-height: 132px;
+    max-height: 138px;
+    padding: 6px 8px;
+  }
+
+  .enemy-hand {
+    min-height: 58px;
+    max-height: 64px;
+  }
+
+  .enemy-hand .card-back {
+    width: 58px;
+    height: 80px;
+  }
+
+  .board {
+    gap: 5px;
+    padding: 8px;
+  }
+
+  .card--hand {
+    --card-width: 90px;
+    --card-height: 135px;
+    grid-template-rows: 12px minmax(0, 1fr) 28px 30px;
+    padding: 5px;
+  }
+
+  .card--hand .card-name {
+    font-size: 10px;
+  }
+
+  .card--board {
+    --card-width: 70px;
+    --card-height: 92px;
+    grid-template-rows: minmax(0, 1fr) 25px 24px;
+    padding: 3px;
+  }
+
+  .card--board .card-name {
+    font-size: 7px;
+  }
+
+  .card--board .card-ability {
+    display: none;
+  }
+
+  .card--board .stat-label {
+    display: none;
+  }
+
+  .card--board .stat-block {
+    grid-template-rows: 1fr;
+  }
+
+  .card--board .stat-value {
+    font-size: 10px;
+  }
+
+  .log-panel {
+    display: none;
+  }
+}
+
+/* Card layout v3: name always lives at the top, never over the illustration. */
+.card {
+  grid-template-rows: 34px minmax(0, 1fr) 19px 46px;
+  gap: 4px;
+}
+
+.card-type-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  min-width: 30px;
+  padding: 2px 7px;
+  font-size: 9px;
+  pointer-events: none;
+}
+
+.card-title-area {
+  grid-row: 1;
+  align-self: stretch;
+  display: grid;
+  grid-template-rows: 1fr;
+  min-height: 0;
+  z-index: 2;
+}
+
+.card-name-banner {
+  min-height: 0;
+  padding: 2px 36px 2px 6px;
+}
+
+.card-name {
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.card-illustration {
+  grid-row: 2;
+  margin-top: 0;
+}
+
+.card-ability {
+  grid-row: 3;
+  align-self: center;
+  min-height: 16px;
+  padding: 1px 7px;
+  font-size: 9px;
+}
+
+.card-stats,
+.card-desc {
+  grid-row: 4;
+}
+
+.card--hand {
+  grid-template-rows: 31px minmax(0, 1fr) 18px 42px;
+}
+
+.card--hand .card-name {
+  font-size: 14px;
+}
+
+.card--hand .card-illustration-svg {
+  width: 88%;
+  height: 88%;
+}
+
+.card--board {
+  grid-template-rows: 20px minmax(0, 1fr) 11px 34px;
+  gap: 2px;
+}
+
+.card--board .card-type-badge {
+  display: none;
+}
+
+.card--board .card-name-banner {
+  padding: 1px 3px;
+  min-height: 0;
+}
+
+.card--board .card-name {
+  font-size: 9px;
+  line-height: 1;
+}
+
+.card--board .card-illustration {
+  border-radius: 7px;
+}
+
+.card--board .card-illustration-svg {
+  width: 96%;
+  height: 96%;
+}
+
+.card--board .card-ability {
+  display: block;
+  min-height: 10px;
+  padding: 0 3px;
+  font-size: 6px;
+  line-height: 1.05;
+}
+
+.card--board .card-stats {
+  gap: 3px;
+}
+
+.card--board .stat-block {
+  grid-template-rows: 8px 1fr;
+  padding: 1px;
+}
+
+.card--board .stat-label {
+  display: block;
+  min-width: 17px;
+  padding: 1px 2px;
+  font-size: 6px;
+}
+
+.card--board .stat-value {
+  font-size: 12px;
+}
+
+.card--board[data-card-id="necromancer"] .card-name,
+.card--board[data-card-id="berserker"] .card-name,
+.card--board[data-card-id="vampire"] .card-name,
+.card--board[data-card-id="polymorph"] .card-name {
+  font-size: 7px;
+}
+
+@media (min-width: 901px) and (max-height: 1200px) {
+  .card--hand {
+    grid-template-rows: 26px minmax(0, 1fr) 14px 34px;
+  }
+
+  .card--hand .card-name {
+    font-size: 12px;
+  }
+
+  .card--hand .card-type-badge {
+    top: 6px;
+    right: 6px;
+    min-width: 27px;
+    padding: 1px 6px;
+    font-size: 8px;
+  }
+
+  .card--hand .card-name-banner {
+    padding-right: 31px;
+  }
+
+  .card--hand .card-ability {
+    min-height: 12px;
+    padding: 0 5px;
+    font-size: 7px;
+  }
+
+  .card--board {
+    grid-template-rows: 17px minmax(0, 1fr) 9px 25px;
+  }
+
+  .card--board .card-name {
+    font-size: 8px;
+  }
+
+  .card--board .card-ability {
+    min-height: 9px;
+    font-size: 6px;
+  }
+
+  .card--board .stat-label {
+    display: none;
+  }
+
+  .card--board .stat-block {
+    grid-template-rows: 1fr;
+  }
+
+  .card--board .stat-value {
+    font-size: 11px;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 820px) {
+  .card--hand {
+    grid-template-rows: 22px minmax(0, 1fr) 0 28px;
+  }
+
+  .card--hand .card-ability {
+    display: none;
+  }
+
+  .card--board {
+    grid-template-rows: 15px minmax(0, 1fr) 0 22px;
+  }
+
+  .card--board .card-ability {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .card--hand {
+    grid-template-rows: 25px minmax(0, 1fr) 14px 34px;
+  }
+
+  .card--board {
+    grid-template-rows: 17px minmax(0, 1fr) 9px 25px;
+  }
+}
+
+@media (max-width: 430px) {
+  .card--hand {
+    grid-template-rows: 21px minmax(0, 1fr) 0 28px;
+  }
+
+  .card--hand .card-ability {
+    display: none;
+  }
+
+  .card--board {
+    grid-template-rows: 15px minmax(0, 1fr) 0 22px;
+  }
+
+  .card--board .card-ability {
+    display: none;
+  }
+}

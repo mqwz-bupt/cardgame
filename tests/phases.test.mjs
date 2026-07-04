@@ -56,7 +56,7 @@ test('revealPhase: 盗贼孤立先手攻击', () => {
   placeUnit(s, SIDES.PLAYER, 'front', 0, UNITS.thief, 2, false);  // 无相邻友军
   placeUnit(s, SIDES.ENEMY, 'front', 2, UNITS.axe, 3, true);      // mirror col 0
   s = revealPhase(s);
-  assert.equal(s.players[SIDES.ENEMY].board['front-2'].hp, 2);
+  assert.equal(s.players[SIDES.ENEMY].board['front-2'].hp, 3);
 });
 
 test('runBattlePhase: 进入 BATTLE 后转 END + 战斗结算', () => {

@@ -8,14 +8,14 @@
 // 所有暗置卡在 REVEAL 阶段已翻为 revealed=true。
 
 import { SIDES, cellKey, cloneState, ROW_COL_BY_LOCAL_POS } from './state.js';
-import { listOccupiedCells, hasNoUnits } from './board.js';
+import { listOccupiedCells, hasNoUnits, hasAdjacentEmptyCell } from './board.js';
 import {
-  computeAttackTargets, applyDamage, applyLifesteal,
+  computeAttackTargets, applyDamage, applyLifesteal, applyHeal,
   canRangedHitUnderRain
 } from './attack.js';
 import { attackLord, checkWin } from './judge.js';
 import { drawCards } from './deck.js';
-import { needsTarget, getValidTargets, pickEnemyTarget } from './targeting.js';
+import { needsTarget, getValidTargets, getSoloStrikeTargets, pickEnemyTarget } from './targeting.js';
 
 // 全局序号 1-12 → {side, localPos}
 // 先手方拿奇数（1,3,5,7,9,11）对应本方编号 1,2,3,4,5,6
@@ -81,6 +81,11 @@ export function* runBattleIter(srcState) {
   if (checkWin(state)) return state;
 
   // 2. 按全局序号遍历
+  const soloResult = yield* runSoloStrikePreIter(state);
+  state = soloResult.state;
+  const soloActedUids = soloResult.actedUids;
+  if (checkWin(state)) return state;
+
   const order = buildOrder(state.firstAttacker);
   for (const { side, localPos } of order) {
     const key = ROW_COL_BY_LOCAL_POS[localPos];
@@ -90,6 +95,7 @@ export function* runBattleIter(srcState) {
     if (!unit) continue;
     if (unit.hp <= 0) continue;
     if (unit.def.ability === 'thorns') continue;
+    if (soloActedUids.has(unit.uid)) continue;
 
     const attacker = { side, row, col, unit };
     const enemySide = side === SIDES.PLAYER ? SIDES.ENEMY : SIDES.PLAYER;
@@ -172,6 +178,29 @@ export function* runBattleIter(srcState) {
 // 单次攻击生成器：可能 yield 多个 attack step（剑士穿刺多目标等）
 function* runOneAttackIter(state, attacker, targetOverride) {
   const def = attacker.unit.def;
+
+  if (def.ability === 'flex' && targetOverride && targetOverride.side === attacker.side) {
+    const before = state.players[targetOverride.side].board[cellKey(targetOverride.row, targetOverride.col)];
+    if (!before) return { state, killed: false };
+    const r = applyHeal(state, targetOverride.side, targetOverride.row, targetOverride.col, 1);
+    state = r.state;
+    if (r.healed > 0) {
+      yield {
+        kind: 'heal',
+        snapshot: cloneState(state),
+        attackerUid: attacker.unit.uid,
+        attackerPos: { side: attacker.side, row: attacker.row, col: attacker.col },
+        attackerName: attacker.unit.def.name,
+        attackerAbility: attacker.unit.def.ability,
+        targetUid: before.uid,
+        targetPos: { side: targetOverride.side, row: targetOverride.row, col: targetOverride.col },
+        dmg: r.healed,
+        healed: r.healed,
+        killed: false
+      };
+    }
+    return { state, killed: false };
+  }
 
   if (targetOverride && !canRangedHitUnderRain(state, attacker, targetOverride)) {
     return { state, killed: false };
@@ -273,6 +302,63 @@ function* runThornsIter(state) {
 
 // 炸弹人「先发」生成器：在常规序号 #1 攻击之前，每个炸弹人对任意敌方位置打 1。
 // 玩家方炸弹人 → yield 'await_target' 让玩家选目标；敌方炸弹人 → AI 选 hp+atk 最高。
+function* runSoloStrikePreIter(state) {
+  const thieves = [];
+  for (const side of [SIDES.PLAYER, SIDES.ENEMY]) {
+    for (const c of listOccupiedCells(state, side)) {
+      if (c.unit.def.ability === 'solo_strike') thieves.push(c);
+    }
+  }
+  thieves.sort((a, b) => a.localPos - b.localPos);
+
+  const actedUids = new Set();
+  for (const t of thieves) {
+    const live = state.players[t.side].board[cellKey(t.row, t.col)];
+    if (!live || live.uid !== t.unit.uid || live.hp <= 0) continue;
+    if (!hasAdjacentEmptyCell(state, t.side, t.row, t.col)) continue;
+
+    const enemy = t.side === SIDES.PLAYER ? SIDES.ENEMY : SIDES.PLAYER;
+    if (hasNoUnits(state, enemy)) continue;
+
+    const attacker = { side: t.side, row: t.row, col: t.col, unit: live };
+    const valids = getSoloStrikeTargets(state, attacker);
+    if (valids.length === 0) continue;
+
+    let choice = null;
+    if (t.side === SIDES.PLAYER) {
+      const playerChoice = yield {
+        kind: 'await_target',
+        snapshot: cloneState(state),
+        attackerUid: live.uid,
+        attackerPos: { side: t.side, row: t.row, col: t.col },
+        attackerName: live.def.name,
+        attackerAbility: 'solo_strike',
+        validTargets: valids
+      };
+      if (!playerChoice) continue;
+      const chosen = valids.find(v =>
+        v.side === playerChoice.side && v.row === playerChoice.row && v.col === playerChoice.col
+      );
+      if (!chosen) continue;
+      choice = chosen;
+    } else {
+      choice = valids
+        .slice()
+        .sort((a, b) => (b.unit.hp + b.unit.def.atk) - (a.unit.hp + a.unit.def.atk))[0];
+    }
+
+    const r = yield* runOneAttackIter(state, attacker, choice);
+    state = r.state;
+    actedUids.add(live.uid);
+    if (r.killed) {
+      state = maybeTriggerNecromancer(state);
+      if (checkWin(state)) return { state, actedUids };
+    }
+  }
+
+  return { state, actedUids };
+}
+
 function* runBomberPreIter(state) {
   const bomberCells = [];
   for (const side of [SIDES.PLAYER, SIDES.ENEMY]) {

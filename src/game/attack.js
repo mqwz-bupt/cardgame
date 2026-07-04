@@ -149,3 +149,15 @@ export function applyLifesteal(state, attacker, actualDmgDealt) {
   state.players[attacker.side].board[cellKey(attacker.row, attacker.col)] = { ...before, hp: healed };
   return state;
 }
+
+export function applyHeal(state, side, row, col, amount = 1) {
+  const unit = state.players[side].board[cellKey(row, col)];
+  if (!unit || amount <= 0) return { state, healed: 0 };
+  const healedHp = Math.min(unit.def.hp, unit.hp + amount);
+  const healed = healedHp - unit.hp;
+  if (healed <= 0) return { state, healed: 0 };
+  state = cloneState(state);
+  state.players[side].board[cellKey(row, col)] = { ...unit, hp: healedHp };
+  state.log.push({ type: 'unit_healed', side, row, col, hpBefore: unit.hp, hpAfter: healedHp, heal: healed, turnNo: state.turnNo });
+  return { state, healed };
+}

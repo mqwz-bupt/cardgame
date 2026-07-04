@@ -67,6 +67,19 @@ export function getAdjacentFriendly(state, side, row, col) {
   return result;
 }
 
+export function hasAdjacentEmptyCell(state, side, row, col) {
+  const candidates = [
+    { row, col: col - 1 },
+    { row, col: col + 1 },
+    { row: row === 'front' ? 'back' : 'front', col }
+  ];
+  return candidates.some(c => (
+    c.col >= 0
+    && c.col <= 2
+    && !state.players[side].board[cellKey(c.row, c.col)]
+  ));
+}
+
 // 列出某方所有非空格（按本方编号 1-6 排序）
 export function listOccupiedCells(state, side) {
   const out = [];

@@ -35,7 +35,6 @@ export function revealPhase(state) {
   state.phase = PHASES.REVEAL;
   state.log.push({ type: 'phase_reveal', turnNo: state.turnNo });
 
-  state = triggerOnReveal(state);
   return state;
 }
 

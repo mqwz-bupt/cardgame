@@ -7,7 +7,7 @@ import { ALL_CARDS, SHEEP } from '../data/cards.js';
 // 检查能否出单位牌（代价是否付得起）
 // handIdx 要打的手牌索引；discardIdx 选作代价弃的另一张索引
 // 返回 {ok: boolean, reason?: string}
-export function canPlayUnit(state, side, handIdx, row, col, discardIdx) {
+export function canPlayUnit(state, side, handIdx, row, col, discardIdx, sacrificeIdx = null) {
   const hand = state.players[side].hand;
   const target = hand[handIdx];
   if (!target) return { ok: false, reason: 'invalid_hand_idx' };
@@ -32,6 +32,11 @@ export function canPlayUnit(state, side, handIdx, row, col, discardIdx) {
   if (def.ability === 'lifesteal' && hand.length < 3) {
     return { ok: false, reason: 'vampire_needs_sacrifice' };
   }
+  if (def.ability === 'lifesteal' && sacrificeIdx !== null && sacrificeIdx !== undefined) {
+    if (sacrificeIdx === handIdx) return { ok: false, reason: 'sacrifice_same_as_play' };
+    if (sacrificeIdx === discardIdx) return { ok: false, reason: 'sacrifice_same_as_discard' };
+    if (!hand[sacrificeIdx]) return { ok: false, reason: 'invalid_sacrifice_idx' };
+  }
 
   return { ok: true };
 }
@@ -40,7 +45,7 @@ export function canPlayUnit(state, side, handIdx, row, col, discardIdx) {
 // 吸血战士：再弃一张 sacrificeIdx。
 // 返回新 state。
 export function playUnit(state, side, handIdx, row, col, discardIdx, sacrificeIdx = null) {
-  const check = canPlayUnit(state, side, handIdx, row, col, discardIdx);
+  const check = canPlayUnit(state, side, handIdx, row, col, discardIdx, sacrificeIdx);
   if (!check.ok) throw new Error(`playUnit rejected: ${check.reason}`);
 
   const hand = state.players[side].hand;
@@ -56,6 +61,9 @@ export function playUnit(state, side, handIdx, row, col, discardIdx, sacrificeId
     if (sacrificeIdx === null || sacrificeIdx === undefined) {
       throw new Error('vampire_needs_sacrifice');
     }
+    if (sacrificeIdx === handIdx) throw new Error('sacrifice_same_as_play');
+    if (sacrificeIdx === discardIdx) throw new Error('sacrifice_same_as_discard');
+    if (!hand[sacrificeIdx]) throw new Error('invalid_sacrifice_idx');
     toDiscardIdx.push(sacrificeIdx);
   }
 

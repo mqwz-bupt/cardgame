@@ -9,6 +9,7 @@ import {
   runBattleIter,
   SIDES, PHASES, cellKey, cloneState
 } from './game/index.js';
+import { renderCard as renderCardFace } from './ui/Card.js';
 
 // ---------- DOM 工具 ----------
 function el(tag, attrs = {}, children = []) {
@@ -55,7 +56,7 @@ let gameState = startGame();
 //   await_discard: 已选要打的手牌（playedIdx），等弃牌代价
 //   await_deploy_cell: 已选要打 + 弃牌，等空格部署
 //   await_poly_target: 已选变羊术（polyIdx），等敌单位
-let interact = { mode: 'idle', playedIdx: null, discardIdx: null, polyIdx: null, targetUid: null };
+let interact = { mode: 'idle', playedIdx: null, discardIdx: null, sacrificeIdx: null, polyIdx: null, targetUid: null };
 let toastMsg = null;
 let toastTimer = null;
 // 战斗动画状态：{ steps, idx, finalState, timer, current }
@@ -113,6 +114,7 @@ const SOUND_MAP = {
   unit_deployed:   () => playTone(523, 0.10, 'square', 0.05),
   unit_died:       () => playTone(110, 0.25, 'sawtooth', 0.08),
   unit_damaged:    () => playTone(330, 0.06, 'square', 0.05),
+  unit_healed:     () => playTone(740, 0.12, 'sine', 0.05),
   polymorph_cast:  () => playSlide(880, 220, 0.32, 'triangle', 0.08),
   lord_hit:        () => { playTone(146, 0.30, 'sawtooth', 0.12); playTone(73, 0.40, 'sine', 0.08); },
   weather_changed: () => playTone(1320, 0.12, 'sine', 0.05),
@@ -146,73 +148,6 @@ function showToast(msg) {
   render();
 }
 
-// ---------- 卡牌面 ----------
-function renderCardArt(def) {
-  const cls = ['card-art', `art-${def.id}`, `art-kind-${def.kind}`, def.ability && `art-ability-${def.ability}`]
-    .filter(Boolean).join(' ');
-  if (def.kind === 'unit') {
-    return el('div', { class: cls, 'aria-label': def.name }, [
-      el('span', { class: 'art-ground' }),
-      el('span', { class: 'art-body' }),
-      el('span', { class: 'art-head' }),
-      el('span', { class: 'art-weapon' }),
-      el('span', { class: 'art-detail' })
-    ]);
-  }
-  return el('div', { class: cls, 'aria-label': def.name }, [
-    el('span', { class: 'art-orb' }),
-    el('span', { class: 'art-detail' }),
-    el('span', { class: 'art-drop art-drop-a' }),
-    el('span', { class: 'art-drop art-drop-b' }),
-    el('span', { class: 'art-drop art-drop-c' })
-  ]);
-}
-
-function renderCardFace(def, opts = {}) {
-  const isSpell = def.kind === 'spell';
-  const isWeather = def.kind === 'weather';
-  const typeLabel = isSpell ? '法术' : isWeather ? '天气' : '单位';
-  const abilityCls = def.ability ? `ability-${def.ability}` : 'ability-none';
-  const cls = ['card', `card-${def.kind}`, isSpell && 'card-spell', isWeather && 'card-weather', abilityCls,
-               ...(Array.isArray(opts.classes) ? opts.classes : [opts.classes])]
-    .filter(Boolean).join(' ');
-  const hp = opts.hp ?? def.hp;
-  const children = [
-    el('div', { class: 'card-banner' }),
-    el('div', { class: 'card-shine' }),
-    el('div', { class: 'card-type', text: typeLabel }),
-    renderCardArt(def),
-    el('div', { class: 'card-name', text: def.name })
-  ];
-  if (def.kind === 'unit') {
-    children.push(el('div', { class: 'card-stats' }, [
-      el('span', { class: 'stat-hp', text: `HP ${hp}/${def.hp}` }),
-      el('span', { class: 'stat-atk', text: `ATK ${def.atk}` })
-    ]));
-    if (def.ability) {
-      children.push(el('div', { class: 'card-ability', text: abilityLabel(def.ability) }));
-    }
-  } else {
-    children.push(el('div', { class: 'card-desc' }, def.desc));
-  }
-  return el('div', {
-    class: cls,
-    'data-kind': def.kind,
-    'data-card-id': def.id,
-    'data-ability': def.ability || ''
-  }, children);
-}
-
-function abilityLabel(ability) {
-  const map = {
-    pierce: '穿刺', any_target: '任意射', guard: '替伤',
-    bomb: '炸弹', bomb_pre: '先发', solo_strike: '孤立先手', thorns: '反伤',
-    chain: '连杀', lifesteal: '吸血', flex: '灵活',
-    death_draw: '死亡抽牌', reposition: '移动'
-  };
-  return map[ability] || ability;
-}
-
 // ---------- 主公面板 ----------
 function renderLordPanel(side, lord, lastEvent) {
   // 最近一条 lord_hit 命中本方 → 闪红
@@ -240,10 +175,13 @@ function renderPlayerHand(hand) {
   const cards = hand.map((c, idx) => {
     const def = ALL_CARDS[c.cardId];
     const isSelected = (interact.mode === 'await_discard' && interact.playedIdx === idx)
+                     || (interact.mode === 'await_sacrifice' && interact.playedIdx === idx)
                      || (interact.mode === 'await_deploy_cell' && interact.playedIdx === idx)
                      || (interact.mode === 'await_poly_target' && interact.polyIdx === idx);
-    const isDiscardPick = interact.mode === 'await_discard' && interact.discardIdx === idx;
+    const isDiscardPick = (interact.discardIdx === idx || interact.sacrificeIdx === idx)
+                        && (interact.mode === 'await_sacrifice' || interact.mode === 'await_deploy_cell');
     const node = renderCardFace(def, {
+      size: 'hand',
       classes: ['hand-card', isSelected && 'selected', isDiscardPick && 'discard-pick']
     });
     node.setAttribute('data-hand-idx', idx);
@@ -258,7 +196,7 @@ function renderEnemyHand(hand) {
   return el('div', { class: 'hand enemy-hand' },
     Array.from({ length: hand.length }, (_, idx) =>
       el('div', { class: 'card-back', style: `--card-delay:${Math.min(idx, 10) * 30}ms` }, [
-        el('div', { class: 'card-back-sigil', text: '✦' })
+        el('div', { class: 'card-back-sigil' })
       ])
     )
   );
@@ -284,10 +222,9 @@ function renderCell(slot, state) {
                          && unit
                          && battleAnim.current.attackerUid === unit.uid;
   const isTargetableCell = inAwaitTarget
-                         && slot.side === SIDES.ENEMY
                          && unit
                          && battleAnim.current.validTargets.some(
-                              v => v.row === slot.row && v.col === slot.col
+                              v => v.side === slot.side && v.row === slot.row && v.col === slot.col
                             );
   // 战斗动画：当前 step 的攻击者高亮 + 目标受击
   const step = battleAnim && battleAnim.current;
@@ -296,9 +233,14 @@ function renderCell(slot, state) {
                    && step.attackerPos.row === slot.row
                    && step.attackerPos.col === slot.col;
   const isTakingDamage = step && step.targetPos && step.targetPos.row !== undefined
+                      && step.kind !== 'heal'
                       && step.targetPos.side === slot.side
                       && step.targetPos.row === slot.row
                       && step.targetPos.col === slot.col;
+  const isHealing = step && step.kind === 'heal' && step.targetPos && step.targetPos.row !== undefined
+                 && step.targetPos.side === slot.side
+                 && step.targetPos.row === slot.row
+                 && step.targetPos.col === slot.col;
   const cls = ['cell',
                `cell-${slot.side}`,
                `row-${slot.row}`,
@@ -308,7 +250,8 @@ function renderCell(slot, state) {
                isCurrentAttacker && 'attacker-active',
                isTargetableCell && 'targetable',
                isAttacking && 'attacking',
-               isTakingDamage && 'taking-damage']
+               isTakingDamage && 'taking-damage',
+               isHealing && 'healing']
     .filter(Boolean).join(' ');
   const children = [
     el('div', { class: 'cell-glow' }),
@@ -316,18 +259,20 @@ function renderCell(slot, state) {
   ];
   if (unit) {
     const card = renderCardFace(unit.def, {
+      size: 'board',
       hp: unit.hp,
       classes: ['in-cell', unit.revealed ? 'revealed' : 'face-down']
     });
     if (!unit.revealed) {
       card.textContent = '';
       card.setAttribute('data-kind', 'hidden');
-      card.appendChild(el('div', { class: 'card-back-sigil', text: '✦' }));
+      card.appendChild(el('div', { class: 'card-back-sigil' }));
       card.appendChild(el('div', { class: 'card-name', text: '暗置' }));
     }
     children.push(card);
   }
   if (isTakingDamage) children.push(el('div', { class: 'dmg-pop', text: `-${step.dmg}` }));
+  if (isHealing) children.push(el('div', { class: 'dmg-pop heal-pop', text: `+${step.healed || step.dmg}` }));
   const cellNode = el('div', {
     class: cls,
     'data-side': slot.side,
@@ -425,7 +370,7 @@ function renderBattleVfx(step) {
 
   if (visualKind === 'melee' && def) {
     children.push(el('div', { class: 'attack-card-wrap' }, [
-      renderCardFace(def, { classes: ['motion-card'] }),
+      renderCardFace(def, { size: 'board', classes: ['motion-card'] }),
       el('span', { class: 'slash-mark' })
     ]));
   } else {
@@ -541,7 +486,7 @@ function interactHint() {
     const step = battleAnim.current;
     if (step.kind === 'await_target') {
       const name = step.attackerName || '单位';
-      return `轮到「${name}」攻击：点击高亮敌方格选目标`;
+      return `${name}: click a highlighted target`;
     }
     if (step.kind === 'thorns') return `地刺反伤（-${step.dmg}）`;
     const who = step.attackerPos ? `${step.attackerPos.side === SIDES.PLAYER ? '我方' : '敌方'} 攻击` : '';
@@ -551,6 +496,7 @@ function interactHint() {
   if (gameState.phase === PHASES.END) {
     return '战斗结束 — 点击下方「结束回合 →」进入下一回合';
   }
+  if (interact.mode === 'await_sacrifice') return 'Vampire: pick one more hand card as sacrifice';
   switch (interact.mode) {
     case 'idle':
       return '点击手牌：选一张要打出的牌，或直接点变羊术释放';
@@ -634,7 +580,7 @@ function renderOverlay(state) {
     battleAnim = null;
     lastPlayedLogLen = 0;
     setState(startGame());
-    setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, polyIdx: null, targetUid: null });
+    setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, sacrificeIdx: null, polyIdx: null, targetUid: null });
   });
   return el('div', { class: 'overlay' }, [
     el('div', { class: 'overlay-panel' }, [
@@ -687,7 +633,7 @@ function onPlayerHandClick(idx) {
       const enemyBoard = gameState.players[SIDES.ENEMY].board;
       const hasTarget = Object.values(enemyBoard).some(u => u);
       if (!hasTarget) { showToast('敌方战场无单位'); return; }
-      setInteract({ mode: 'await_poly_target', playedIdx: null, discardIdx: null, polyIdx: idx, targetUid: null });
+      setInteract({ mode: 'await_poly_target', playedIdx: null, discardIdx: null, sacrificeIdx: null, polyIdx: idx, targetUid: null });
     }
     return;
   }
@@ -706,10 +652,10 @@ function onPlayerHandClick(idx) {
       return;
     }
     if (def.ability === 'lifesteal' && gameState.players[SIDES.PLAYER].hand.length < 3) {
-      showToast('吸血战士放置需献祭：手牌至少 3 张');
+      showToast('Vampire needs 3 cards: play + discard + sacrifice');
       return;
     }
-    setInteract({ mode: 'await_discard', playedIdx: idx, discardIdx: null, polyIdx: null, targetUid: null });
+    setInteract({ mode: 'await_discard', playedIdx: idx, discardIdx: null, sacrificeIdx: null, polyIdx: null, targetUid: null });
     return;
   }
 
@@ -717,24 +663,38 @@ function onPlayerHandClick(idx) {
   if (interact.mode === 'await_discard') {
     if (idx === interact.playedIdx) {
       // 再次点击同一张 = 取消
-      setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, polyIdx: null, targetUid: null });
+      setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, sacrificeIdx: null, polyIdx: null, targetUid: null });
       return;
     }
-    setInteract({ ...interact, discardIdx: idx, mode: 'await_deploy_cell' });
+    const playedDef = ALL_CARDS[gameState.players[SIDES.PLAYER].hand[interact.playedIdx].cardId];
+    setInteract({ ...interact, discardIdx: idx, mode: playedDef.ability === 'lifesteal' ? 'await_sacrifice' : 'await_deploy_cell' });
+    return;
+  }
+
+  if (interact.mode === 'await_sacrifice') {
+    if (idx === interact.playedIdx) {
+      setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, sacrificeIdx: null, polyIdx: null, targetUid: null });
+      return;
+    }
+    if (idx === interact.discardIdx) {
+      showToast('Pick a different sacrifice card');
+      return;
+    }
+    setInteract({ ...interact, sacrificeIdx: idx, mode: 'await_deploy_cell' });
     return;
   }
 
   if (interact.mode === 'await_deploy_cell') {
     // 等空格，但再次点 playedIdx 表示取消
     if (idx === interact.playedIdx) {
-      setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, polyIdx: null, targetUid: null });
+      setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, sacrificeIdx: null, polyIdx: null, targetUid: null });
     }
     return;
   }
 
   if (interact.mode === 'await_poly_target') {
     // 在 polymorph 状态下点击手牌 = 取消 polymorph
-    setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, polyIdx: null, targetUid: null });
+    setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, sacrificeIdx: null, polyIdx: null, targetUid: null });
   }
 }
 
@@ -743,10 +703,10 @@ function onCellClick(slot) {
 
   // 战斗中玩家选目标：点击高亮敌方格 → 把选择传回战斗迭代器
   if (battleAnim && battleAnim.current && battleAnim.current.kind === 'await_target') {
-    if (slot.side !== SIDES.ENEMY) return;
-    const valid = battleAnim.current.validTargets.some(v => v.row === slot.row && v.col === slot.col);
+    const chosen = battleAnim.current.validTargets.find(v => v.side === slot.side && v.row === slot.row && v.col === slot.col);
+    const valid = Boolean(chosen);
     if (!valid) { showToast('该目标不可选（可能是雨天限制）'); return; }
-    resumeBattle({ side: SIDES.ENEMY, row: slot.row, col: slot.col });
+    resumeBattle({ side: chosen.side, row: chosen.row, col: chosen.col });
     return;
   }
 
@@ -756,7 +716,7 @@ function onCellClick(slot) {
     try {
       const next = playPolymorph(gameState, SIDES.PLAYER, interact.polyIdx, slot.row, slot.col);
       setState(next);
-      setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, polyIdx: null, targetUid: null });
+      setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, sacrificeIdx: null, polyIdx: null, targetUid: null });
     } catch (e) {
       showToast('释放失败：' + e.message);
     }
@@ -769,15 +729,15 @@ function onCellClick(slot) {
       return;
     }
     const def = ALL_CARDS[gameState.players[SIDES.PLAYER].hand[interact.playedIdx].cardId];
-    const check = canPlayUnit(gameState, SIDES.PLAYER, interact.playedIdx, slot.row, slot.col, interact.discardIdx);
+    const check = canPlayUnit(gameState, SIDES.PLAYER, interact.playedIdx, slot.row, slot.col, interact.discardIdx, interact.sacrificeIdx);
     if (!check.ok) {
       showToast('无法部署：' + check.reason);
       return;
     }
     try {
-      const next = playUnit(gameState, SIDES.PLAYER, interact.playedIdx, slot.row, slot.col, interact.discardIdx);
+      const next = playUnit(gameState, SIDES.PLAYER, interact.playedIdx, slot.row, slot.col, interact.discardIdx, interact.sacrificeIdx);
       setState(next);
-      setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, polyIdx: null, targetUid: null });
+      setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, sacrificeIdx: null, polyIdx: null, targetUid: null });
     } catch (e) {
       showToast('部署失败：' + e.message);
     }
@@ -790,7 +750,7 @@ function onCommitDeploy() {
   let next = enemyDeploy(gameState);
   next = revealPhase(next);
   setState(next);
-  setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, polyIdx: null, targetUid: null });
+  setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, sacrificeIdx: null, polyIdx: null, targetUid: null });
 }
 
 function onCommitReveal() {
@@ -864,6 +824,8 @@ function advanceBattleStep(choice = null) {
     playTone(73, 0.35, 'sine', 0.06);
   } else if (step.kind === 'attack') {
     playTone(550, 0.08, 'square', 0.05);
+  } else if (step.kind === 'heal') {
+    playTone(740, 0.12, 'sine', 0.05);
   } else if (step.kind === 'thorns') {
     playTone(220, 0.12, 'triangle', 0.05);
   }
@@ -899,7 +861,7 @@ function onCommitEnd() {
   let next = endTurn(gameState);     // phase=DRAW, turnNo+1, swap firstAttacker
   next = runDrawPhase(next);          // phase=DEPLOY
   setState(next);
-  setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, polyIdx: null, targetUid: null });
+  setInteract({ mode: 'idle', playedIdx: null, discardIdx: null, sacrificeIdx: null, polyIdx: null, targetUid: null });
 }
 
 // ---------- 启动 ----------
